@@ -8,5 +8,9 @@ pnpm-lock.yaml
 yarn.lock
 bun.lockb
 
+src/scripts/
+src/internal/gamelogic/
+src/internal/routing/
+
 .env
 .env.*
