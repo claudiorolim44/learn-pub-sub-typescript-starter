@@ -8,9 +8,10 @@ import {
 } from '../internal/gamelogic/gamelogic.js'
 import { commandSpawn } from '../internal/gamelogic/spawn.js'
 import { GameState } from '../internal/gamelogic/gamestate.js'
-import { declareAndBind, SimpleQueueType } from '../internal/pubsub/consume.js'
+import { subscribeJSON, SimpleQueueType } from '../internal/pubsub/consume.js'
 import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js'
 import { commandMove } from '../internal/gamelogic/move.js'
+import { handlerPause } from './handlers.js'
 
 async function main() {
   const rabbitConnString = 'amqp://guest:guest@localhost:5672/'
@@ -32,15 +33,18 @@ async function main() {
 
   const userName = await clientWelcome()
 
-  await declareAndBind(
+  const gameState = new GameState(userName)
+
+  const finalHandlerPause = handlerPause(gameState)
+
+  await subscribeJSON(
     conn,
     ExchangePerilDirect,
     PauseKey + '.' + userName,
     PauseKey,
     SimpleQueueType.Transient,
+    finalHandlerPause,
   )
-
-  const gameState: GameState = new GameState(userName)
 
   function printError(err: unknown) {
     console.log(err instanceof Error ? err.message : String(err))
