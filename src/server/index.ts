@@ -13,12 +13,7 @@ async function main() {
 
   async function publishPause(publishValue: PlayingState): Promise<void> {
     try {
-      await publishJSON<PlayingState>(
-        channel,
-        ExchangePerilDirect,
-        PauseKey,
-        publishValue,
-      )
+      await publishJSON(channel, ExchangePerilDirect, PauseKey, publishValue)
     } catch (err) {
       throw new Error('Error publishing pause/resume message', { cause: err })
     }
