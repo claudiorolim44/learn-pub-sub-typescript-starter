@@ -59,6 +59,13 @@ async function main() {
     const command = words[0]
 
     switch (command) {
+      case 'spawn':
+        try {
+          commandSpawn(gameState, words)
+        } catch (err) {
+          printError(err)
+        }
+        break
       case 'move':
         try {
           commandMove(gameState, words)
@@ -68,13 +75,6 @@ async function main() {
         break
       case 'status':
         await commandStatus(gameState)
-        break
-      case 'spawn':
-        try {
-          commandSpawn(gameState, words)
-        } catch (err) {
-          printError(err)
-        }
         break
       case 'help':
         printClientHelp()

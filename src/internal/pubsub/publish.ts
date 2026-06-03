@@ -1,10 +1,10 @@
 import { type ConfirmChannel } from 'amqplib'
 
-export function publishJSON<T>(
+export function publishJSON(
   ch: ConfirmChannel,
   exchange: string,
   routingKey: string,
-  value: T,
+  value: unknown,
 ): Promise<void> {
   const content = Buffer.from(JSON.stringify(value))
 

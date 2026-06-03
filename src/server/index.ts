@@ -9,6 +9,7 @@ async function main() {
   const rabbitConnString = 'amqp://guest:guest@localhost:5672/'
   const conn = await amqp.connect(rabbitConnString)
   const channel = await conn.createConfirmChannel()
+  console.log('Peril game server connected to RabbitMQ!')
 
   async function publishPause(publishValue: PlayingState): Promise<void> {
     try {
@@ -32,7 +33,6 @@ async function main() {
     }
   }
 
-  console.log('Peril game server connected to RabbitMQ!')
   ;['SIGINT', 'SIGTERM'].forEach((signal) =>
     process.on(signal, () => {
       void closeConnection().finally(() => process.exit(0))
