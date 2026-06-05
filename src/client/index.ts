@@ -9,14 +9,31 @@ import {
 import { commandSpawn } from '../internal/gamelogic/spawn.js'
 import { GameState } from '../internal/gamelogic/gamestate.js'
 import { subscribeJSON, SimpleQueueType } from '../internal/pubsub/consume.js'
-import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js'
+import {
+  ArmyMovesPrefix,
+  ExchangePerilDirect,
+  ExchangePerilTopic,
+  PauseKey,
+} from '../internal/routing/routing.js'
 import { commandMove } from '../internal/gamelogic/move.js'
-import { handlerPause } from './handlers.js'
+import { handlerMove, handlerPause } from './handlers.js'
+import type { ArmyMove } from '../internal/gamelogic/gamedata.js'
+import { publishJSON } from '../internal/pubsub/publish.js'
 
 async function main() {
   const rabbitConnString = 'amqp://guest:guest@localhost:5672/'
   const conn = await amqp.connect(rabbitConnString)
+  const channel = await conn.createConfirmChannel()
   console.log('Starting Peril client...')
+
+  async function publishInTopic(key: string, value: unknown): Promise<void> {
+    try {
+      await publishJSON(channel, ExchangePerilTopic, key, value)
+    } catch (err) {
+      throw new Error('Error publishing message', { cause: err })
+    }
+  }
+
   ;['SIGINT', 'SIGTERM'].forEach((signal) =>
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     process.on(signal, async () => {
@@ -35,15 +52,22 @@ async function main() {
 
   const gameState = new GameState(userName)
 
-  const finalHandlerPause = handlerPause(gameState)
-
   await subscribeJSON(
     conn,
     ExchangePerilDirect,
     PauseKey + '.' + userName,
     PauseKey,
     SimpleQueueType.Transient,
-    finalHandlerPause,
+    handlerPause(gameState),
+  )
+
+  await subscribeJSON(
+    conn,
+    ExchangePerilTopic,
+    `${ArmyMovesPrefix}.${userName}`,
+    `${ArmyMovesPrefix}.*`,
+    SimpleQueueType.Transient,
+    handlerMove(gameState),
   )
 
   function printError(err: unknown) {
@@ -66,13 +90,17 @@ async function main() {
           printError(err)
         }
         break
-      case 'move':
+      case 'move': {
+        let armyMove: ArmyMove
         try {
-          commandMove(gameState, words)
+          armyMove = commandMove(gameState, words)
         } catch (err) {
           printError(err)
+          break
         }
+        await publishInTopic(`${ArmyMovesPrefix}.${userName}`, armyMove)
         break
+      }
       case 'status':
         await commandStatus(gameState)
         break
