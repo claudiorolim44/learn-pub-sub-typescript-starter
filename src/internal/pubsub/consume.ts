@@ -37,7 +37,7 @@ export async function subscribeJSON<T>(
   queueName: string,
   key: string,
   queueType: SimpleQueueType,
-  handler: (data: T) => AckType,
+  handler: (data: T) => Promise<AckType> | AckType,
 ): Promise<void> {
   const [ch, queue] = await declareAndBind(
     conn,
@@ -47,7 +47,7 @@ export async function subscribeJSON<T>(
     queueType,
   )
 
-  await ch.consume(queue.queue, function (msg: amqp.ConsumeMessage | null) {
+  await ch.consume(queue.queue, async (msg: amqp.ConsumeMessage | null) => {
     if (!msg) return
 
     let data: T
@@ -59,7 +59,7 @@ export async function subscribeJSON<T>(
     }
 
     try {
-      const result = handler(data)
+      const result = await handler(data)
       switch (result) {
         case AckType.Ack:
           ch.ack(msg)
@@ -73,10 +73,11 @@ export async function subscribeJSON<T>(
           ch.nack(msg, false, true)
           console.log('NackRequeue')
           break
-        default:
+        default: {
           const unreachable: never = result
           console.error('Unexpected ack type:', unreachable)
           return
+        }
       }
     } catch (err) {
       console.error('Error handling message:', err)
