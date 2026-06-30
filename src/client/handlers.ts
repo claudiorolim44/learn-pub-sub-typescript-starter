@@ -66,7 +66,7 @@ export function handlerWar(gs: GameState) {
       const outcome = handleWar(gs, recognition)
       switch (outcome.result) {
         case WarOutcome.NotInvolved:
-          return AckType.Ack
+          return AckType.NackRequeue
         case WarOutcome.NoUnits:
           return AckType.NackDiscard
         case WarOutcome.OpponentWon:
