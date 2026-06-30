@@ -42,14 +42,19 @@ export function handlerMove(
             attacker: move.player,
             defender: gs.getPlayerSnap(),
           }
-          await publishJSON(
-            ch,
-            ExchangePerilTopic,
-            `${WarRecognitionsPrefix}.${gs.getUsername()}`,
-            recognition,
-          )
 
-          return AckType.NackRequeue
+          try {
+            await publishJSON(
+              ch,
+              ExchangePerilTopic,
+              `${WarRecognitionsPrefix}.${gs.getUsername()}`,
+              recognition,
+            )
+            return AckType.Ack
+          } catch (err) {
+            console.error('Error publishing war recognition:', err)
+            return AckType.NackRequeue
+          }
         }
         default:
           return AckType.NackDiscard
@@ -64,6 +69,7 @@ export function handlerWar(gs: GameState) {
   return (recognition: RecognitionOfWar): AckType => {
     try {
       const outcome = handleWar(gs, recognition)
+
       switch (outcome.result) {
         case WarOutcome.NotInvolved:
           return AckType.NackRequeue
